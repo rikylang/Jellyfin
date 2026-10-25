@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "my-xtream",
+  "name": "Xtream Codes",
+  "description": "Server compatibile Xtream Codes (player_api.php): categorie, canali live ed EPG.",
+  "kind": "xtream",
+  "defaults": { "language": "", "country": "" },
+  "secrets": { "username": "", "password": "" },
+  "xtream": {
+    "server": "http://example.com:8080",
+    "username": "{secret.username}",
+    "password": "{secret.password}",
+    "output": "m3u8",
+    "includeEpg": true,
+    "excludeCategories": "(?i)adult|xxx",
+    "refreshMinutes": 360
+  }
+}

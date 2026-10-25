@@ -1,0 +1,76 @@
+# Live Hub — example stack: Jellyfin + gluetun (VPN) + optional headless resolver.
+#
+# Mode A (recommended, used below): Jellyfin keeps its normal network; ONLY the Live Hub traffic goes through the
+#   gluetun HTTP proxy (egress profile "vpn": type Http, host "gluetun", port 8888). Library, metadata and remote
+#   clients are not affected by the VPN. Kill switch: if gluetun is down, Live Hub refuses to connect directly.
+#
+# Mode B (everything behind the VPN): uncomment `network_mode: "service:gluetun"` on jellyfin, remove its `ports`
+#   and `networks`, and publish 8096 on gluetun instead (plus FIREWALL_INPUT_PORTS=8096). Pros: every byte of the
+#   server leaves through the VPN, nothing to configure in Live Hub (use the "direct" profile). Cons: remote access,
+#   metadata providers and DLNA also go through the VPN; if the tunnel drops, Jellyfin is unreachable.
+#
+# Copy to docker-compose.yml, fill the VPN variables (see https://github.com/qdm12/gluetun-wiki) and run:
+#   docker compose up -d
+
+services:
+  gluetun:
+    image: qmcgaw/gluetun:v3.40.0
+    container_name: gluetun
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      - VPN_SERVICE_PROVIDER=protonvpn          # your provider
+      - VPN_TYPE=wireguard
+      - WIREGUARD_PRIVATE_KEY=change-me
+      - SERVER_COUNTRIES=Italy                  # exit country (Live Hub shows the real one in "Verify connection")
+      - HTTPPROXY=on                            # proxy used by Live Hub
+      - HTTPPROXY_LISTENING_ADDRESS=:8888
+      - HTTPPROXY_STEALTH=on
+      # - SHADOWSOCKS=on                        # alternative: SOCKS5 on :8388 (egress type Socks5)
+      - HTTP_CONTROL_SERVER_ADDRESS=:8000       # control server: tunnel status / public IP shown in Live Hub
+      - HTTP_CONTROL_SERVER_AUTH_DEFAULT_ROLE={"auth":"apikey","apikey":"change-me-too"}
+      - FIREWALL_INPUT_PORTS=3000               # lets Jellyfin reach the optional resolver inside gluetun's network
+      - TZ=Europe/Rome
+    # ports:                                    # Mode B only
+    #   - 8096:8096
+    networks:
+      - media
+    restart: unless-stopped
+
+  jellyfin:
+    image: jellyfin/jellyfin:12.3.0
+    container_name: jellyfin
+    # network_mode: "service:gluetun"           # Mode B only
+    ports:
+      - 8096:8096
+    networks:
+      - media
+    volumes:
+      - ./jellyfin/config:/config
+      - ./jellyfin/cache:/cache
+      - /path/to/media:/media:ro
+    environment:
+      - TZ=Europe/Rome
+    depends_on:
+      - gluetun
+    restart: unless-stopped
+
+  # Optional: headless browser for players that build the stream URL with JavaScript.
+  # It shares the VPN network so that pages and the resulting stream URL see the same exit IP.
+  # In Live Hub: Settings → "Headless resolver" = on, URL = http://gluetun:3000 (it listens inside gluetun's network).
+  livehub-resolver:
+    build: ./resolver-sidecar
+    container_name: livehub-resolver
+    network_mode: "service:gluetun"
+    environment:
+      - PORT=3000
+      - MAX_CONCURRENCY=2
+    depends_on:
+      - gluetun
+    restart: unless-stopped
+    profiles: ["resolver"]                      # start with: docker compose --profile resolver up -d
+
+networks:
+  media: {}

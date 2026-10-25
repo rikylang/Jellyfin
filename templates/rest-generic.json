@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "my-rest-api",
+  "name": "REST JSON generico",
+  "description": "Punto di partenza per qualsiasi API JSON: una lista di eventi con stream inclusi.",
+  "kind": "rest",
+  "priority": 100,
+  "defaults": { "language": "en", "country": "", "timezone": "UTC", "category": "Sport", "eventDurationMinutes": 120 },
+  "connection": {
+    "baseUrl": "https://api.example.com",
+    "headers": { "Accept": "application/json" },
+    "timeoutSeconds": 15,
+    "auth": { "type": "none" }
+  },
+  "events": [
+    {
+      "id": "events",
+      "scope": "all",
+      "request": { "url": "{baseUrl}/events" },
+      "pagination": { "type": "none" },
+      "root": "$.data[*]",
+      "fields": {
+        "id": "$.id",
+        "title": "$.title",
+        "category": "$.category",
+        "competition": "$.competition",
+        "start": { "path": "$.start", "format": "auto" },
+        "isLive": { "path": "$.live", "transforms": [ { "op": "boolean" } ] },
+        "thumb": "$.image",
+        "language": "$.language"
+      },
+      "streams": {
+        "path": "$.streams[*]",
+        "fields": { "url": "$.url", "quality": "$.quality", "language": "$.language" }
+      }
+    }
+  ],
+  "resolver": { "enabled": true, "strategy": "auto" },
+  "refresh": { "liveSeconds": 45, "todaySeconds": 300, "allSeconds": 1800, "adaptive": true }
+}

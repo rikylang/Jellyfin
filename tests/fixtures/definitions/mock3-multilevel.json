@@ -1,0 +1,53 @@
+{
+  "$schema": "../../../schemas/provider.schema.json",
+  "schemaVersion": 1,
+  "id": "mock-multilevel",
+  "name": "Mock 3 · stream su endpoint separato a più livelli",
+  "kind": "rest",
+  "priority": 90,
+  "allowPrivateNetwork": true,
+  "variables": { "mockBase": "http://127.0.0.1:5099" },
+  "defaults": { "language": "it", "country": "IT", "timezone": "Europe/Rome", "category": "Calcio", "eventDurationMinutes": 115 },
+  "connection": {
+    "baseUrl": "{var.mockBase}/api3",
+    "auth": { "type": "oauth2ClientCredentials", "tokenUrl": "{baseUrl}/oauth/token", "clientId": "livehub", "clientSecret": "{secret.clientSecret}" }
+  },
+  "secrets": { "clientSecret": "s3cret" },
+  "events": [
+    {
+      "id": "matches",
+      "request": { "url": "{baseUrl}/matches" },
+      "root": "$.matches[*]",
+      "fields": {
+        "id": "$.matchId",
+        "title": "{$.home} vs {$.away}",
+        "homeTeam": "$.home",
+        "awayTeam": "$.away",
+        "competition": "$.competition",
+        "category": { "path": "$.sport", "transforms": [ { "op": "map", "table": { "football": "Calcio" }, "ignoreCase": true } ] },
+        "start": { "path": "$.kickoff", "format": "dd/MM/yyyy HH:mm", "timezone": "Europe/Rome" }
+      }
+    }
+  ],
+  "streams": {
+    "lazy": true,
+    "cacheSeconds": 120,
+    "levels": [
+      {
+        "request": { "url": "{baseUrl}/matches/{event.id}/sources" },
+        "root": "$.sources[*]",
+        "as": "source",
+        "fields": {
+          "id": "$.sourceId",
+          "label": "$.provider",
+          "language": { "path": "$.language", "transforms": [ { "op": "map", "table": { "Italian": "it", "English": "en" }, "ignoreCase": true } ] }
+        }
+      },
+      {
+        "request": { "url": "{baseUrl}/sources/{source.id}/streams" },
+        "root": "$.streams[*]",
+        "fields": { "url": "$.file", "quality": "$.label", "headers": "$.headers" }
+      }
+    ]
+  }
+}

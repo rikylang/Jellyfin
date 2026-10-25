@@ -1,0 +1,112 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+    paths-ignore: ['**/*.md']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  DOTNET_NOLOGO: '1'
+
+jobs:
+  build-test:
+    name: Build & unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore
+        run: dotnet restore LiveHub.slnx
+      - name: Build (warnings are errors)
+        run: dotnet build LiveHub.slnx -c Release --no-restore -warnaserror
+      - name: Unit tests (offline, mock server in-process)
+        run: dotnet test LiveHub.slnx -c Release --no-build --blame-hang --blame-hang-timeout 5m --logger "trx;LogFileName=results.trx" --results-directory TestResults
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: TestResults
+
+  package:
+    name: Package (JPRM + manifest)
+    needs: build-test
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compute version
+        id: ver
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then V="${GITHUB_REF#refs/tags/v}"; else V="0.1.0.${GITHUB_RUN_NUMBER}"; fi
+          # Jellyfin needs a 4-part version and the release URL uses the tag as is: tag releases as v0.1.0.0
+          [ "$(echo "$V" | tr -cd . | wc -c)" -eq 3 ] || { echo "Tag must be vMAJOR.MINOR.PATCH.BUILD (e.g. v0.1.0.0)"; exit 1; }
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+      - name: Build plugin zip and manifest
+        run: |
+          python build/package.py --version "${{ steps.ver.outputs.version }}" --output artifacts \
+            --base-url "https://github.com/${GITHUB_REPOSITORY}/releases/download/v${{ steps.ver.outputs.version }}"
+      - name: Validate with the official JPRM
+        run: |
+          pip install jprm
+          mkdir -p jprm-repo
+          jprm repo init jprm-repo
+          jprm repo add --url "https://github.com/${GITHUB_REPOSITORY}/releases/download/v${{ steps.ver.outputs.version }}" jprm-repo artifacts/livehub_*.zip
+          python -c "import json;m=json.load(open('jprm-repo/manifest.json'));assert m[0]['guid']=='19816826-9c4f-49a5-9222-e00484264789';print('JPRM manifest OK', m[0]['versions'][0]['version'])"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: plugin
+          path: |
+            artifacts/livehub_*.zip
+            artifacts/manifest.json
+
+  integration:
+    name: Integration (Jellyfin 12.3 in Docker)
+    needs: package
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: plugin
+          path: artifacts
+      - name: Run integration scenario
+        run: bash tests/integration/run.sh artifacts
+      - name: Jellyfin logs
+        if: failure()
+        run: docker compose -f tests/integration/docker-compose.yml logs --no-color | tail -n 400
+
+  release:
+    name: GitHub release (installable repository)
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [package, integration]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: plugin
+          path: artifacts
+      - name: Publish release assets (zip + manifest.json)
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/livehub_*.zip
+            artifacts/manifest.json
+          generate_release_notes: true

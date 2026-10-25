@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <NoWarn>$(NoWarn);CA1707;CA2007;CA1515;CA1062;CA1307;CA1305;CA1310;CA1861;CA1849;CA2000;CA1031;CA1001;CA2234;CA1054;CA1056;CA1822;CA1859;CA1860;CA1869;CA5394;CA1308;CA1851</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="10.0.12" />
+    <PackageReference Include="JsonSchema.Net" Version="7.3.4" />
+    <PackageReference Include="Jellyfin.Controller" Version="$(JellyfinVersion)" />
+    <PackageReference Include="Jellyfin.Model" Version="$(JellyfinVersion)" />
+    <!-- The server provides SkiaSharp at runtime; tests need the managed and native libraries themselves. -->
+    <PackageReference Include="SkiaSharp" Version="3.119.4" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="3.119.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Jellyfin.Plugin.LiveHub\Jellyfin.Plugin.LiveHub.csproj" />
+    <ProjectReference Include="..\LiveHub.MockServer\LiveHub.MockServer.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\fixtures\**\*" LinkBase="fixtures" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\schemas\provider.schema.json" Link="fixtures\provider.schema.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\templates\*.json" LinkBase="fixtures\templates" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\build.yaml" Link="fixtures\build.yaml" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

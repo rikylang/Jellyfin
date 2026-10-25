@@ -1,0 +1,25 @@
+# Integration environment: Jellyfin 12.3 + the Live Hub mock server + a static file server acting as the plugin repository.
+# Driven by tests/integration/run.sh.
+services:
+  jellyfin:
+    image: jellyfin/jellyfin:12.3.0
+    ports:
+      - "18096:8096"
+    environment:
+      - JELLYFIN_PublishedServerUrl=http://jellyfin:8096
+    depends_on:
+      - mock
+      - repo
+
+  mock:
+    build:
+      context: ../..
+      dockerfile: tests/integration/mock.Dockerfile
+    environment:
+      - MOCK_PUBLIC_HLS=1          # events point to free public HLS test streams (real decoding by ffmpeg)
+      - ASPNETCORE_URLS=http://+:5055
+
+  repo:
+    image: nginx:1.27-alpine
+    volumes:
+      - ./repo:/usr/share/nginx/html:ro

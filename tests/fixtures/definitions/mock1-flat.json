@@ -1,0 +1,40 @@
+{
+  "$schema": "../../../schemas/provider.schema.json",
+  "schemaVersion": 1,
+  "id": "mock-flat",
+  "name": "Mock 1 · array piatto (unix)",
+  "kind": "rest",
+  "priority": 100,
+  "allowPrivateNetwork": true,
+  "variables": { "mockBase": "http://127.0.0.1:5099" },
+  "defaults": { "language": "it", "country": "IT", "category": "Sport", "eventDurationMinutes": 120 },
+  "connection": { "baseUrl": "{var.mockBase}/api1", "timeoutSeconds": 10 },
+  "events": [
+    {
+      "id": "all",
+      "scope": "all",
+      "request": { "url": "{baseUrl}/events.json" },
+      "refreshSeconds": 45,
+      "root": "$[*]",
+      "fields": {
+        "id": "$.id",
+        "title": { "path": "$.title", "transforms": [ { "op": "replace", "pattern": "\\s+-\\s+", "replacement": " vs " } ] },
+        "category": "$.sport",
+        "competition": "$.league",
+        "start": { "path": "$.start", "format": "unix" },
+        "isLive": { "path": "$.live", "transforms": [ { "op": "boolean" } ] },
+        "popularity": "$.viewers",
+        "thumb": { "path": "$.img", "transforms": [ { "op": "absoluteUrl", "base": "{var.mockBase}" } ] },
+        "language": { "path": "$.lang", "transforms": [ { "op": "map", "table": { "ITA": "it", "ENG": "en" }, "ignoreCase": true } ] }
+      },
+      "streams": {
+        "path": "$.streams[*]",
+        "fields": {
+          "url": "$.url",
+          "quality": "$.q",
+          "language": { "path": "$.lang", "transforms": [ { "op": "map", "table": { "ITA": "it", "ENG": "en" }, "ignoreCase": true } ] }
+        }
+      }
+    }
+  ]
+}

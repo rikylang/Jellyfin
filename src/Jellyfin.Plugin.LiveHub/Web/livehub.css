@@ -1,0 +1,28 @@
+.lh-tabs { display: flex; flex-wrap: wrap; gap: .4em; margin: 1em 0; }
+.lh-tabs button { border-radius: 2em; padding: .45em 1.1em; border: 1px solid rgba(128,128,128,.4); background: transparent; color: inherit; cursor: pointer; }
+.lh-tabs button.active { background: #00a4dc; border-color: #00a4dc; color: #fff; }
+.lh-panel { display: none; }
+.lh-panel.active { display: block; }
+.lh-card { border: 1px solid rgba(128,128,128,.25); border-radius: .6em; padding: 1em; margin: .8em 0; }
+.lh-row { display: flex; flex-wrap: wrap; gap: .8em; align-items: center; }
+.lh-grow { flex: 1 1 18em; }
+.lh-muted { opacity: .7; font-size: .9em; }
+.lh-badge { display: inline-block; padding: .1em .55em; border-radius: 1em; font-size: .8em; font-weight: 600; background: rgba(128,128,128,.25); margin-right: .3em; }
+.lh-badge.live { background: #d32f2f; color: #fff; }
+.lh-badge.ok { background: #2e7d32; color: #fff; }
+.lh-badge.warn { background: #ef6c00; color: #fff; }
+.lh-badge.err { background: #b71c1c; color: #fff; }
+.lh-table { width: 100%; border-collapse: collapse; font-size: .9em; }
+.lh-table th, .lh-table td { text-align: left; padding: .35em .5em; border-bottom: 1px solid rgba(128,128,128,.2); vertical-align: top; }
+.lh-table td.bad { background: rgba(211,47,47,.18); }
+.lh-table td.miss { background: rgba(239,108,0,.15); }
+.lh-code { font-family: ui-monospace, Consolas, monospace; width: 100%; min-height: 22em; font-size: .85em; box-sizing: border-box; background: rgba(0,0,0,.25); color: inherit; border: 1px solid rgba(128,128,128,.35); border-radius: .4em; padding: .6em; }
+.lh-small-code { min-height: 8em; }
+.lh-pre { white-space: pre-wrap; word-break: break-all; font-family: ui-monospace, Consolas, monospace; font-size: .85em; background: rgba(0,0,0,.2); padding: .6em; border-radius: .4em; max-height: 28em; overflow: auto; }
+.lh-steps { display: flex; gap: .5em; margin-bottom: 1em; flex-wrap: wrap; }
+.lh-steps span { padding: .25em .8em; border-radius: 1em; background: rgba(128,128,128,.2); font-size: .85em; }
+.lh-steps span.active { background: #00a4dc; color: #fff; }
+.lh-map-row { display: grid; grid-template-columns: 10em 1fr 12em; gap: .5em; align-items: center; margin: .25em 0; }
+.lh-map-row input { width: 100%; box-sizing: border-box; }
+.lh-chips label { display: inline-flex; align-items: center; gap: .3em; margin: .2em .6em .2em 0; }
+@media (max-width: 700px) { .lh-map-row { grid-template-columns: 1fr; } }

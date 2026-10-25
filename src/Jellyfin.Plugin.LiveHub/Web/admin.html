@@ -1,0 +1,72 @@
+<div id="liveHubAdminPage" data-role="page" class="page type-interior pluginConfigurationPage fullWidthContent" data-require="emby-input,emby-button,emby-select,emby-checkbox,emby-textarea" data-controller="__plugin/LiveHub.admin.js">
+    <div data-role="content">
+        <div class="content-primary">
+            <div class="sectionTitleContainer flex align-items-center">
+                <h2 class="sectionTitle">Live Hub</h2>
+                <span class="lh-muted" id="lhVersion" style="margin-left:1em"></span>
+            </div>
+            <p class="lh-muted" data-i18n="admin.disclaimer">Live Hub does not host or distribute any content. Only connect sources you are entitled to watch in your country.</p>
+            <div class="lh-tabs" id="lhTabs">
+                <button type="button" data-tab="providers" class="active" data-i18n="tab.providers">Providers</button>
+                <button type="button" data-tab="wizard" data-i18n="tab.wizard">Add API</button>
+                <button type="button" data-tab="editor" data-i18n="tab.editor">Editor</button>
+                <button type="button" data-tab="settings" data-i18n="tab.settings">Settings</button>
+                <button type="button" data-tab="egress" data-i18n="tab.egress">Egress / VPN</button>
+                <button type="button" data-tab="users" data-i18n="tab.users">Users</button>
+                <button type="button" data-tab="diagnostics" data-i18n="tab.diagnostics">Diagnostics</button>
+            </div>
+
+            <!-- Providers -->
+            <div class="lh-panel active" data-panel="providers">
+                <div class="lh-row">
+                    <button is="emby-button" type="button" class="raised button-submit emby-button" id="lhAddApi"><span data-i18n="providers.add">Add API</span></button>
+                    <button is="emby-button" type="button" class="raised emby-button" id="lhImport"><span data-i18n="providers.import">Import</span></button>
+                    <button is="emby-button" type="button" class="raised emby-button" id="lhSyncAll"><span data-i18n="providers.syncAll">Sync now</span></button>
+                    <input type="file" id="lhImportFile" accept=".json,application/json" style="display:none" />
+                </div>
+                <div id="lhProviderList"></div>
+                <h3 data-i18n="providers.templates">Templates</h3>
+                <div id="lhTemplates" class="lh-row"></div>
+            </div>
+
+            <!-- Wizard -->
+            <div class="lh-panel" data-panel="wizard">
+                <div class="lh-steps" id="lhWizSteps">
+                    <span data-step="1" class="active" data-i18n="wizard.step1">1 · Source</span>
+                    <span data-step="2" data-i18n="wizard.step2">2 · Mapping</span>
+                    <span data-step="3" data-i18n="wizard.step3">3 · Preview</span>
+                    <span data-step="4" data-i18n="wizard.step4">4 · Save</span>
+                </div>
+                <div id="lhWizBody"></div>
+            </div>
+
+            <!-- Editor -->
+            <div class="lh-panel" data-panel="editor">
+                <div id="lhEditorBody"></div>
+            </div>
+
+            <!-- Settings -->
+            <div class="lh-panel" data-panel="settings">
+                <form id="lhSettingsForm"></form>
+            </div>
+
+            <!-- Egress -->
+            <div class="lh-panel" data-panel="egress">
+                <div id="lhEgressBody"></div>
+            </div>
+
+            <!-- Users -->
+            <div class="lh-panel" data-panel="users">
+                <div id="lhUsersBody"></div>
+            </div>
+
+            <!-- Diagnostics -->
+            <div class="lh-panel" data-panel="diagnostics">
+                <div class="lh-row">
+                    <button is="emby-button" type="button" class="raised emby-button" id="lhDiagRefresh"><span data-i18n="diag.refresh">Refresh</span></button>
+                </div>
+                <div id="lhDiagBody"></div>
+            </div>
+        </div>
+    </div>
+</div>

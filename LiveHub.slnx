@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Jellyfin.Plugin.LiveHub/Jellyfin.Plugin.LiveHub.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Jellyfin.Plugin.LiveHub.Tests/Jellyfin.Plugin.LiveHub.Tests.csproj" />
+    <Project Path="tests/LiveHub.MockServer/LiveHub.MockServer.csproj" />
+  </Folder>
+</Solution>

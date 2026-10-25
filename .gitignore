@@ -1,0 +1,11 @@
+bin/
+obj/
+.vs/
+.idea/
+artifacts/
+TestResults/
+*.user
+.jellyfin-local/
+
+tests/integration/repo/
+resolver-sidecar/node_modules/

@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../schemas/provider.schema.json",
+  "schemaVersion": 1,
+  "id": "mock-xtream",
+  "name": "Mock 6 · Xtream Codes",
+  "kind": "xtream",
+  "allowPrivateNetwork": true,
+  "variables": { "mockBase": "http://127.0.0.1:5099" },
+  "defaults": { "language": "it", "country": "IT" },
+  "secrets": { "username": "user", "password": "pass" },
+  "xtream": {
+    "server": "{var.mockBase}/xtream",
+    "username": "{secret.username}",
+    "password": "{secret.password}",
+    "output": "m3u8",
+    "includeEpg": true,
+    "excludeCategories": "(?i)adult|xxx"
+  }
+}

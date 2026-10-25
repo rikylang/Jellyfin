@@ -1,0 +1,49 @@
+{
+  "$schema": "../../../schemas/provider.schema.json",
+  "schemaVersion": 1,
+  "id": "mock-nested",
+  "name": "Mock 2 · JSON annidato, cursore, ISO 8601",
+  "kind": "rest",
+  "priority": 80,
+  "allowPrivateNetwork": true,
+  "variables": { "mockBase": "http://127.0.0.1:5099" },
+  "defaults": { "language": "en", "eventDurationMinutes": 150 },
+  "connection": {
+    "baseUrl": "{var.mockBase}/api2",
+    "headers": { "Accept": "application/json" },
+    "auth": { "type": "apiKey", "in": "header", "name": "X-Api-Key", "value": "{secret.apiKey}" }
+  },
+  "secrets": { "apiKey": "mock-key-2" },
+  "categories": {
+    "request": { "url": "{baseUrl}/v2/categories" },
+    "root": "$.data[*]",
+    "fields": { "id": "$.slug", "name": "$.label" }
+  },
+  "events": [
+    {
+      "id": "schedule",
+      "scope": "all",
+      "request": { "url": "{baseUrl}/v2/schedule" },
+      "pagination": { "type": "cursor", "param": "cursor", "cursorPath": "$.meta.next_cursor", "size": 2, "sizeParam": "limit", "maxPages": 10 },
+      "root": "$.data.items[*]",
+      "fields": {
+        "id": "$.uid",
+        "title": "$.name.display",
+        "category": "$.category.label",
+        "categoryId": "$.category.slug",
+        "competition": "$.competition.title",
+        "start": { "path": "$.timing.startsAt", "format": "iso8601" },
+        "end": { "path": "$.timing.endsAt", "format": "iso8601" },
+        "status": { "path": "$.state", "transforms": [ { "op": "map", "table": { "LIVE": "live", "SCHEDULED": "upcoming", "FINISHED": "ended" }, "ignoreCase": true } ] },
+        "poster": "$.artwork.poster",
+        "thumb": "$.artwork.thumbnail",
+        "participants": { "path": "$.teams[*]", "name": "$.name", "logo": "$.badge" },
+        "country": "$.region"
+      },
+      "streams": {
+        "path": "$.feeds[*]",
+        "fields": { "url": "$.src", "language": "$.audio", "quality": "$.resolution", "bitrate": "$.bitrate" }
+      }
+    }
+  ]
+}

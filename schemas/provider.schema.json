@@ -1,0 +1,396 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/livehub/jellyfin-plugin-livehub/schemas/provider.schema.json",
+  "title": "Live Hub Provider Definition",
+  "description": "Declarative description of an external live source (REST JSON API, M3U/XMLTV, Xtream Codes or a direct stream URL). Schema version 1.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "name", "kind"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 1 },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]{1,63}$",
+      "description": "Stable identifier. Lowercase letters, digits, '-' and '_'."
+    },
+    "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "description": { "type": "string", "maxLength": 2000 },
+    "enabled": { "type": "boolean", "default": true },
+    "priority": {
+      "type": "integer", "minimum": 0, "maximum": 1000, "default": 100,
+      "description": "Higher wins when the same event comes from several providers (fields, default stream order)."
+    },
+    "kind": { "enum": ["rest", "m3u", "xtream", "direct"] },
+    "egressProfile": {
+      "type": ["string", "null"],
+      "description": "Id of the egress (proxy/VPN) profile used for ALL traffic of this provider. null = regional/global default."
+    },
+    "allowPrivateNetwork": {
+      "type": "boolean", "default": false,
+      "description": "Admin opt-in to reach private/loopback addresses (e.g. a LAN tuner). Off by default (SSRF protection)."
+    },
+    "defaults": { "$ref": "#/$defs/defaults" },
+    "connection": { "$ref": "#/$defs/connection" },
+    "secrets": {
+      "type": "object",
+      "description": "Named secrets referenced as {secret.name}. Stored encrypted (enc:v1:...) and never exported.",
+      "additionalProperties": { "type": "string" }
+    },
+    "variables": {
+      "type": "object",
+      "description": "Custom constants referenced as {var.name}.",
+      "additionalProperties": { "type": "string" }
+    },
+    "categories": { "$ref": "#/$defs/endpoint" },
+    "events": { "type": "array", "items": { "$ref": "#/$defs/endpoint" }, "maxItems": 16 },
+    "eventDetail": { "$ref": "#/$defs/endpoint" },
+    "streams": { "$ref": "#/$defs/streamChain" },
+    "channels": { "type": "array", "items": { "$ref": "#/$defs/endpoint" }, "maxItems": 16 },
+    "m3u": { "$ref": "#/$defs/m3u" },
+    "xtream": { "$ref": "#/$defs/xtream" },
+    "direct": { "$ref": "#/$defs/direct" },
+    "resolver": { "$ref": "#/$defs/resolver" },
+    "refresh": { "$ref": "#/$defs/refresh" },
+    "categoryRules": { "type": "array", "items": { "$ref": "#/$defs/categoryRule" }, "maxItems": 200 },
+    "openApi": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "specUrl": { "type": "string" },
+        "selectedOperations": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  },
+  "allOf": [
+    { "if": { "properties": { "kind": { "const": "m3u" } } }, "then": { "required": ["m3u"] } },
+    { "if": { "properties": { "kind": { "const": "xtream" } } }, "then": { "required": ["xtream"] } },
+    { "if": { "properties": { "kind": { "const": "direct" } } }, "then": { "required": ["direct"] } },
+    {
+      "if": { "properties": { "kind": { "const": "rest" } } },
+      "then": { "anyOf": [ { "required": ["events"] }, { "required": ["channels"] } ] }
+    }
+  ],
+  "$defs": {
+    "template": {
+      "type": "string",
+      "description": "Text with {placeholders}: {baseUrl} {page} {offset} {limit} {cursor} {date} {date:yyyyMMdd} {now} {nowMs} {category.id} {category.name} {event.id} {event.<field>} {source.<field>} {secret.<name>} {var.<name>} {value} and {$.json.path} relative to the current item. Filters: {x|urlencode} {x|lower} {x|upper}. Use {{ and }} for literal braces."
+    },
+    "jsonPath": {
+      "type": "string",
+      "pattern": "^[$@]",
+      "description": "JSONPath: $ root, @ current, .name, ['name'], [n], [-1], [*], [a,b], [start:end:step], ..name, [?(@.f == 'x' && @.n > 3)], [?(@.f =~ /re/i)]."
+    },
+    "fieldSpec": {
+      "description": "A JSONPath string ('$.title'), a template string ('{$.home} vs {$.away}') or an object.",
+      "oneOf": [
+        { "type": "string", "minLength": 1 },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "path": { "$ref": "#/$defs/jsonPath" },
+            "template": { "$ref": "#/$defs/template" },
+            "value": { "type": ["string", "number", "boolean"] },
+            "transforms": { "type": "array", "items": { "$ref": "#/$defs/transform" }, "maxItems": 20 },
+            "format": {
+              "type": "string",
+              "description": "Dates: auto | unix | unixMs | iso8601 | rfc1123 | a .NET custom pattern such as 'dd/MM/yyyy HH:mm'."
+            },
+            "timezone": { "type": "string", "description": "IANA zone for dates without offset, e.g. Europe/Rome." },
+            "all": { "type": "boolean", "description": "Collect every match (array) instead of the first one." }
+          }
+        }
+      ]
+    },
+    "transform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["op"],
+      "properties": {
+        "op": {
+          "enum": [
+            "lowercase", "uppercase", "trim", "default", "map", "replace", "extract",
+            "concat", "split", "join", "prefix", "suffix", "number", "boolean",
+            "absoluteUrl", "stripHtml", "template", "first", "last"
+          ]
+        },
+        "value": { "type": ["string", "number", "boolean", "null"] },
+        "values": { "type": "array", "items": { "type": "string" } },
+        "table": { "type": "object", "additionalProperties": { "type": ["string", "null"] } },
+        "default": { "type": ["string", "null"] },
+        "ignoreCase": { "type": "boolean" },
+        "strict": { "type": "boolean" },
+        "pattern": { "type": "string", "maxLength": 1000 },
+        "replacement": { "type": "string" },
+        "group": { "type": ["integer", "string"] },
+        "separator": { "type": "string" },
+        "index": { "type": "integer" },
+        "base": { "type": "string" },
+        "trueValues": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["url"],
+      "properties": {
+        "url": { "$ref": "#/$defs/template" },
+        "method": { "enum": ["GET", "POST"], "default": "GET" },
+        "headers": { "type": "object", "additionalProperties": { "type": "string" } },
+        "query": { "type": "object", "additionalProperties": { "type": "string" } },
+        "body": { "type": "string", "description": "Template; for POST." },
+        "contentType": { "type": "string", "default": "application/json" }
+      }
+    },
+    "pagination": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": { "enum": ["none", "page", "offset", "cursor", "nextUrl", "linkHeader"] },
+        "param": { "type": "string", "description": "Query parameter for page/offset/cursor (added when not already in the URL template)." },
+        "start": { "type": "integer", "default": 1 },
+        "size": { "type": "integer", "minimum": 1, "maximum": 1000 },
+        "sizeParam": { "type": "string" },
+        "cursorPath": { "$ref": "#/$defs/jsonPath" },
+        "nextUrlPath": { "$ref": "#/$defs/jsonPath" },
+        "totalPagesPath": { "$ref": "#/$defs/jsonPath" },
+        "maxPages": { "type": "integer", "minimum": 1, "maximum": 100, "default": 10 }
+      }
+    },
+    "condition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field"],
+      "properties": {
+        "field": { "type": "string", "description": "Mapped field name or JSONPath." },
+        "equals": { "type": ["string", "number", "boolean"] },
+        "notEquals": { "type": ["string", "number", "boolean"] },
+        "matches": { "type": "string" },
+        "missing": { "type": "boolean" }
+      }
+    },
+    "endpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["request"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,40}$" },
+        "scope": { "enum": ["live", "today", "upcoming", "all"], "default": "all" },
+        "request": { "$ref": "#/$defs/request" },
+        "forEach": { "enum": ["none", "category", "date"], "default": "none" },
+        "dateRange": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "fromDays": { "type": "integer", "minimum": -7, "maximum": 0 },
+            "toDays": { "type": "integer", "minimum": 0, "maximum": 14 },
+            "format": { "type": "string", "default": "yyyy-MM-dd" }
+          }
+        },
+        "pagination": { "$ref": "#/$defs/pagination" },
+        "refreshSeconds": { "type": "integer", "minimum": 15, "maximum": 86400 },
+        "format": { "enum": ["auto", "json", "m3u", "xmltv"], "default": "auto" },
+        "root": { "$ref": "#/$defs/jsonPath" },
+        "fields": {
+          "type": "object",
+          "description": "Field mapping. Event keys: id title category categoryId competition start end durationMinutes isLive status popularity poster thumb logo participants homeTeam awayTeam homeLogo awayLogo country language description pageUrl tags contentRating. Category keys: id name image. Channel keys: id name number category logo country language epgId description.",
+          "propertyNames": {
+            "enum": [
+              "id", "title", "name", "category", "categoryId", "competition", "start", "end",
+              "durationMinutes", "isLive", "status", "popularity", "poster", "thumb", "logo", "image",
+              "participants", "homeTeam", "awayTeam", "homeLogo", "awayLogo", "country", "language",
+              "description", "pageUrl", "tags", "contentRating", "number", "epgId"
+            ]
+          },
+          "properties": {
+            "participants": { "$ref": "#/$defs/participants" }
+          },
+          "additionalProperties": { "$ref": "#/$defs/fieldSpec" }
+        },
+        "streams": { "$ref": "#/$defs/inlineStreams" },
+        "skipIf": { "type": "array", "items": { "$ref": "#/$defs/condition" }, "maxItems": 10 }
+      }
+    },
+    "participants": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path"],
+      "properties": {
+        "path": { "$ref": "#/$defs/jsonPath" },
+        "name": { "$ref": "#/$defs/fieldSpec" },
+        "logo": { "$ref": "#/$defs/fieldSpec" }
+      }
+    },
+    "streamFields": {
+      "type": "object",
+      "propertyNames": {
+        "enum": [
+          "id", "url", "type", "quality", "height", "bitrate", "hd", "language", "country",
+          "headers", "referer", "userAgent", "expiresAt", "label"
+        ]
+      },
+      "additionalProperties": { "$ref": "#/$defs/fieldSpec" }
+    },
+    "inlineStreams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "fields"],
+      "properties": {
+        "path": { "$ref": "#/$defs/jsonPath" },
+        "fields": { "$ref": "#/$defs/streamFields" }
+      }
+    },
+    "streamLevel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["request"],
+      "properties": {
+        "request": { "$ref": "#/$defs/request" },
+        "root": { "$ref": "#/$defs/jsonPath" },
+        "as": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9]{0,20}$", "default": "source" },
+        "format": { "enum": ["auto", "json"], "default": "auto" },
+        "fields": { "$ref": "#/$defs/streamFields" }
+      }
+    },
+    "streamChain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["levels"],
+      "properties": {
+        "lazy": { "type": "boolean", "default": true, "description": "true: fetched when an event is opened/pre-resolved; false: during sync." },
+        "cacheSeconds": { "type": "integer", "minimum": 0, "maximum": 3600, "default": 120 },
+        "levels": { "type": "array", "items": { "$ref": "#/$defs/streamLevel" }, "minItems": 1, "maxItems": 4 }
+      }
+    },
+    "auth": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": { "enum": ["none", "apiKey", "bearer", "basic", "oauth2ClientCredentials", "cookie"] },
+        "in": { "enum": ["header", "query"], "default": "header" },
+        "name": { "type": "string" },
+        "value": { "$ref": "#/$defs/template" },
+        "username": { "$ref": "#/$defs/template" },
+        "password": { "$ref": "#/$defs/template" },
+        "tokenUrl": { "$ref": "#/$defs/template" },
+        "clientId": { "$ref": "#/$defs/template" },
+        "clientSecret": { "$ref": "#/$defs/template" },
+        "scope": { "type": "string" }
+      }
+    },
+    "connection": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "baseUrl": { "type": "string" },
+        "headers": { "type": "object", "additionalProperties": { "type": "string" } },
+        "userAgent": { "type": "string" },
+        "timeoutSeconds": { "type": "integer", "minimum": 2, "maximum": 120, "default": 15 },
+        "maxResponseBytes": { "type": "integer", "minimum": 1024, "maximum": 67108864, "default": 16777216 },
+        "rateLimit": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "requestsPerMinute": { "type": "integer", "minimum": 1, "maximum": 6000, "default": 60 },
+            "burst": { "type": "integer", "minimum": 1, "maximum": 100, "default": 10 }
+          }
+        },
+        "auth": { "$ref": "#/$defs/auth" }
+      }
+    },
+    "defaults": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "language": { "type": "string", "description": "ISO 639-1, used when the API does not say." },
+        "country": { "type": "string", "description": "ISO 3166-1 alpha-2." },
+        "timezone": { "type": "string", "description": "IANA zone for dates without offset." },
+        "category": { "type": "string" },
+        "eventDurationMinutes": { "type": "integer", "minimum": 5, "maximum": 1440 },
+        "contentRating": { "type": "string", "description": "Jellyfin OfficialRating applied to items (parental control)." },
+        "tags": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "m3u": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["url"],
+      "properties": {
+        "url": { "$ref": "#/$defs/template" },
+        "xmltvUrl": { "$ref": "#/$defs/template" },
+        "mode": { "enum": ["channels", "events"], "default": "channels" },
+        "eventTitlePattern": {
+          "type": "string",
+          "description": "events mode: regex with named groups (?<title>) (?<time>HH:mm) (?<date>) used to build events from entry names."
+        },
+        "includeGroups": { "type": "string", "description": "Regex on group-title; only matching entries are kept." },
+        "excludeGroups": { "type": "string" },
+        "refreshMinutes": { "type": "integer", "minimum": 5, "maximum": 10080, "default": 360 }
+      }
+    },
+    "xtream": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["server", "username", "password"],
+      "properties": {
+        "server": { "type": "string", "description": "http(s)://host:port" },
+        "username": { "$ref": "#/$defs/template" },
+        "password": { "$ref": "#/$defs/template" },
+        "output": { "enum": ["m3u8", "ts"], "default": "m3u8" },
+        "includeEpg": { "type": "boolean", "default": true },
+        "includeCategories": { "type": "string", "description": "Regex on category name." },
+        "excludeCategories": { "type": "string" },
+        "refreshMinutes": { "type": "integer", "minimum": 5, "maximum": 10080, "default": 360 }
+      }
+    },
+    "direct": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["url"],
+      "properties": {
+        "url": { "$ref": "#/$defs/template" },
+        "name": { "type": "string" },
+        "logo": { "type": "string" },
+        "category": { "type": "string" },
+        "type": { "enum": ["auto", "hls", "dash", "mp4", "ts", "embed"], "default": "auto" },
+        "headers": { "type": "object", "additionalProperties": { "type": "string" } }
+      }
+    },
+    "resolver": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean", "default": true },
+        "strategy": { "enum": ["auto", "direct", "extract", "headless"], "default": "auto" },
+        "referer": { "type": "string" },
+        "maxDepth": { "type": "integer", "minimum": 0, "maximum": 4, "default": 2 },
+        "cacheSeconds": { "type": "integer", "minimum": 0, "maximum": 21600, "default": 600 }
+      }
+    },
+    "refresh": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "liveSeconds": { "type": "integer", "minimum": 15, "maximum": 3600, "default": 45 },
+        "todaySeconds": { "type": "integer", "minimum": 30, "maximum": 21600, "default": 300 },
+        "allSeconds": { "type": "integer", "minimum": 60, "maximum": 86400, "default": 1800 },
+        "adaptive": { "type": "boolean", "default": true }
+      }
+    },
+    "categoryRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["match"],
+      "properties": {
+        "match": { "type": "string", "description": "Regex matched against category, competition and title." },
+        "category": { "type": "string" },
+        "country": { "type": "string" },
+        "language": { "type": "string" },
+        "durationMinutes": { "type": "integer", "minimum": 5, "maximum": 1440 }
+      }
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "livehub-resolver",
+  "version": "0.1.0",
+  "description": "Headless browser resolver sidecar for the Live Hub Jellyfin plugin",
+  "main": "server.js",
+  "license": "GPL-3.0-only",
+  "private": true,
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "playwright": "1.49.1"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "$schema": "../../../schemas/provider.schema.json",
+  "schemaVersion": 1,
+  "id": "mock-m3u",
+  "name": "Mock 5 · M3U + XMLTV",
+  "kind": "m3u",
+  "allowPrivateNetwork": true,
+  "variables": { "mockBase": "http://127.0.0.1:5099" },
+  "defaults": { "category": "TV" },
+  "m3u": {
+    "url": "{var.mockBase}/m3u/playlist.m3u",
+    "xmltvUrl": "{var.mockBase}/xmltv/guide.xml.gz",
+    "mode": "channels",
+    "excludeGroups": "(?i)adult",
+    "refreshMinutes": 360
+  }
+}

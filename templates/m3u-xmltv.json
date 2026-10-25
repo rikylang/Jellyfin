@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "my-m3u",
+  "name": "Playlist M3U + guida XMLTV",
+  "description": "Canali 24/7 da una playlist M3U/M3U8, con EPG XMLTV (anche .gz) collegata via tvg-id.",
+  "kind": "m3u",
+  "defaults": { "language": "", "country": "", "category": "TV" },
+  "m3u": {
+    "url": "https://example.com/playlist.m3u",
+    "xmltvUrl": "https://example.com/guide.xml.gz",
+    "mode": "channels",
+    "excludeGroups": "(?i)adult|xxx",
+    "refreshMinutes": 360
+  }
+}

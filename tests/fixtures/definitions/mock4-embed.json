@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schemas/provider.schema.json",
+  "schemaVersion": 1,
+  "id": "mock-embed",
+  "name": "Mock 4 · stream come pagine embed",
+  "kind": "rest",
+  "allowPrivateNetwork": true,
+  "variables": { "mockBase": "http://127.0.0.1:5099" },
+  "defaults": { "language": "en", "timezone": "UTC", "eventDurationMinutes": 180 },
+  "connection": { "baseUrl": "{var.mockBase}/api4" },
+  "resolver": { "enabled": true, "strategy": "auto", "maxDepth": 2, "cacheSeconds": 300 },
+  "events": [
+    {
+      "request": { "url": "{baseUrl}/feed.json" },
+      "root": "$.events[*]",
+      "fields": {
+        "id": "$.id",
+        "title": "$.name",
+        "category": "$.category",
+        "start": { "path": "$.date", "format": "yyyy-MM-dd HH:mm:ss" },
+        "pageUrl": "$.embed"
+      },
+      "streams": { "path": "$", "fields": { "url": "$.embed", "type": { "value": "embed" }, "label": "Embed" } }
+    }
+  ]
+}
